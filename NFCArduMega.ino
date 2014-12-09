@@ -74,6 +74,6 @@ void loop() {
     nfc.emulate(5000);
 
     wizFi250.closeAllSockets();
-    nfc.checkSerial();
+    //nfc.checkSerial();
     Serial.println("log:fine emulazione;");
 }

@@ -64,6 +64,7 @@ boolean connectedToBackend = false;
 char* otpReceived = "";
 char otp[10];
 char cardId[] = "00005678";
+char cardName[] = "Macchina Prova 1";
 
 TOTP totp = TOTP(secretK, 10);
 
@@ -255,10 +256,11 @@ boolean MyCard::backendConnection() {
 	do{
 
 		connectedToBackend = _wifishield->connect((char*)_wifishield->m_peerIPAddr,TSN_REMOTE_PORT);
+		delay(100);
 	}while(!connectedToBackend);
 
 	Serial.println("log:connected to app engine servlet;");
-	_wifishield->clear();
+	//_wifishield->clear();
 	return true;
 	/*if(_wifishield->connect((char*)_wifishield->m_peerIPAddr,TSN_REMOTE_PORT)) {
 		Serial.println("log:connected to app engine servlet;");
@@ -585,10 +587,14 @@ void MyCard::setResponse(responseCommand cmd, uint8_t* buf, uint8_t* sendlen, ui
         case PRIV_APPLICATION_SELECTED:
             buf[0] = R_SW1_PRIV_APP_SELECTED;
             buf[1] = R_SW2_PRIV_APP_SELECTED;
-            for (int y = 0; y < sizeof(cardId) - 1; y++) {
+            for (int y = 0; y < sizeof(cardId); y++) {
                 buf[y + 2] = (uint8_t)cardId[y];
             }
-            *sendlen = 2 + sizeof(cardId) - 1;
+            buf[10] = (uint8_t)',';
+            for (int z = 0; z < sizeof(cardName); z++) {
+            	buf[z + 2 + 9] = (uint8_t)cardName[z];
+            }
+            *sendlen = 2 + sizeof(cardId) + sizeof(cardName)- 1;
         	break;
         case STATUS_WAITING:
             buf[0] = R_SW1_STATUS_WAITING;
@@ -634,37 +640,34 @@ void MyCard::setResponse(responseCommand cmd, uint8_t* buf, uint8_t* sendlen, ui
 }
 
 void MyCard::checkSerial() {
+	Serial.println("log: check serial;");
 	int i = 0;
 	boolean serialAvailable = false;
-	char m[512];
+	//char m[512];
 	String msg = "";
 	char c;
 
-	while(_wifishield->available() > 0) {
-		c = _wifishield->read();
-		if((c == ';')  || (c == '\n') || (c == '\r') || (c == '\r\n') || (c == ':')) {
-			m[i] = ' ';
-			//Serial.print("|");
-		} else {
-			m[i] = (char)c;
-			//Serial.print(c);
+	//delay(200);
+
+	if(Serial1.available() > 0) {
+		Serial.println("log: serial available ");
+
+
+		while(Serial1.available() > 0) {
+			c = (char)Serial1.read();
+			if((c == ';')  || (c == '\n') || (c == '\r') || (c == '\r\n') || (c == ':')) {
+				//m[i] = ' ';
+				Serial.print("|");
+			} else {
+				//m[i] = (char)c;
+				Serial.print(c);
+			}
+			i++;
+			serialAvailable = true;
 		}
-		i++;
-		serialAvailable = true;
-	}
 
-	if(serialAvailable) {
-		Serial.print("log: ");
-
-		msg = m;
-
-		Serial.print(m);
 		Serial.println(";");
 
-		int h = msg.indexOf("202 Accepted",0);
-		Serial.print("log: ok = ");
-		Serial.print(h);
-		Serial.println(";");
 	}
 
 }
@@ -675,6 +678,7 @@ void MyCard::sendRequest(Event event) {
 	int contentLength;
 	String machineId = cardId;
 	String timestamp = timestampBuf;
+	boolean available = false;
 	switch(event) {
 		case NOTHING:
 			break;
@@ -694,7 +698,33 @@ void MyCard::sendRequest(Event event) {
 			Serial1.print("\r\n\r\n");
 			Serial1.print(content);
 			Serial1.print("\r\n\r\n");
-			delay(300);
+			delay(1000);
+			int h;
+			do {
+				if (_wifishield->available() > 0) {
+					available = true;
+					h = Serial1.available();
+				}
+			}while(!available);
+
+			Serial.print("log: serial ");
+			Serial.print(h);
+
+			char c;
+
+
+			while(_wifishield->available() > 0) {
+			c = (char)_wifishield->read();
+			if((c == ';')  || (c == '\n') || (c == '\r') || (c == '\r\n') || (c == ':')) {
+				//m[i] = ' ';
+				Serial.print(" ");
+			} else {
+				//m[i] = (char)c;
+				Serial.print(c);
+			}
+			}
+
+			Serial.println(";");
 			//checkSerial();
 			break;
 		case LOGOUT:
@@ -710,7 +740,7 @@ void MyCard::sendRequest(Event event) {
 			Serial1.print("\r\n\r\n");
 			Serial1.print(content);
 			Serial1.print("\r\n\r\n");
-			delay(300);
+			delay(5);
 			//checkSerial();
 			break;
 		case RECHARGE_TRANSACTION:
@@ -724,7 +754,7 @@ void MyCard::sendRequest(Event event) {
 			Serial1.print("\r\n\r\n");
 			Serial1.print(content);
 			Serial1.print("\r\n\r\n");
-			delay(300);
+			delay(5);
 			//checkSerial();
 			break;
 		default:
