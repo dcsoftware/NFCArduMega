@@ -16,10 +16,10 @@
 #include <WizFi250.h>
 
 #define MAX_TGREAD
-#define SSID "Alice-36047564"
-#define KEY "medicalinstruments09021972"
-#define SSID0 "Belkin.7335"
-#define KEY0 "CorradiniCelaniStradelliGuelfi103"
+#define SSID0 "Alice-36047564"
+#define KEY0 "medicalinstruments09021972"
+#define SSID "Belkin.7335"
+#define KEY "CorradiniCelaniStradelliGuelfi103"
 #define AUTH "WPA2"
 #define TSN_HOST_IP        "173.194.35.20"
 #define TSN_REMOTE_PORT    80
@@ -640,8 +640,9 @@ void MyCard::setResponse(responseCommand cmd, uint8_t* buf, uint8_t* sendlen, ui
 }
 
 void MyCard::checkSerial() {
-	Serial.println("log: check serial;");
-	int i = 0;
+	//Serial.println("log: check serial;");
+	boolean available = false;
+	/*int i = 0;
 	boolean serialAvailable = false;
 	//char m[512];
 	String msg = "";
@@ -668,6 +669,48 @@ void MyCard::checkSerial() {
 
 		Serial.println(";");
 
+	}*/
+	delay(1000);
+	int h;
+	String s= "";
+	do {
+		if (_wifishield->available() > 0) {
+			available = true;
+			h = _wifishield->available();
+		}
+	}while(!available);
+
+	Serial.print("log: serial ");
+	Serial.print(h);
+
+	char c;
+	char m[256];
+	uint8_t i = 0;
+	while(_wifishield->available() > 0) {
+		c = (char)_wifishield->read();
+		if((c == ';')  || (c == '\n') || (c == '\r') || (c == '\r\n') || (c == ':')) {
+			m[i] = ' ';
+			//s += ' ';
+			//Serial.print(" ");
+		} else {
+			m[i] = c;
+			//s += c;
+			//Serial.print(c);
+		}
+		i++;
+
+	}
+
+	//s = m;
+
+	//Serial.print(m);
+
+	Serial.println(";");
+
+	delay(200);
+
+	if(strstr(m, "202") > 0) {
+		Serial.println("log: 202 accepted;");
 	}
 
 }
@@ -698,7 +741,7 @@ void MyCard::sendRequest(Event event) {
 			Serial1.print("\r\n\r\n");
 			Serial1.print(content);
 			Serial1.print("\r\n\r\n");
-			delay(1000);
+			/*delay(1000);
 			int h;
 			do {
 				if (_wifishield->available() > 0) {
@@ -711,21 +754,23 @@ void MyCard::sendRequest(Event event) {
 			Serial.print(h);
 
 			char c;
-
-
+			char m[512];
 			while(_wifishield->available() > 0) {
-			c = (char)_wifishield->read();
-			if((c == ';')  || (c == '\n') || (c == '\r') || (c == '\r\n') || (c == ':')) {
-				//m[i] = ' ';
-				Serial.print(" ");
-			} else {
-				//m[i] = (char)c;
-				Serial.print(c);
-			}
+				c = (char)_wifishield->read();
+				if((c == ';')  || (c == '\n') || (c == '\r') || (c == '\r\n') || (c == ':')) {
+					//m[i] = ' ';
+					Serial.print(" ");
+				} else {
+					//m[i] = c;
+					Serial.print(c);
+				}
+
 			}
 
-			Serial.println(";");
-			//checkSerial();
+			//Serial.print(m);
+
+			Serial.println(";");*/
+			checkSerial();
 			break;
 		case LOGOUT:
 			break;
