@@ -16,10 +16,10 @@
 #include <WizFi250.h>
 
 #define MAX_TGREAD
-#define SSID0 "Alice-36047564"
-#define KEY0 "medicalinstruments09021972"
-#define SSID "Belkin.7335"
-#define KEY "CorradiniCelaniStradelliGuelfi103"
+#define SSID "Alice-36047564"
+#define KEY "medicalinstruments09021972"
+#define SSID0 "Belkin.7335"
+#define KEY0 "CorradiniCelaniStradelliGuelfi103"
 #define AUTH "WPA2"
 #define TSN_HOST_IP        "173.194.35.20"
 #define TSN_REMOTE_PORT    80
@@ -42,12 +42,15 @@ String userCredit;
 char amountBuf[6];
 char timestampBuf[19];
 uint8_t secretK[] = "ABCDEFGHIJ"; //{0x41, 0x42, 0x43, 0x44, 0x45, 0x46, 0x47, 0x48, 0x49, 0x4a};
+char secret[20];
 int intCount = 0;
 long epoch = 0;
 long transactionId = 10000000;
 int led = 7;
 int led1 = 6;
 int led2 = 5;
+char currentDate[8];
+boolean keyIsUpdated = false;
 String inputCommand = "";         // a string to hold incoming data
 String inputValue = "";
 String inputValue2 = "";
@@ -60,6 +63,7 @@ boolean request = false;
 boolean loggedin = false;
 boolean validIp = false;
 boolean connectedToBackend = false;
+boolean keyRequest = false;
 
 char* otpReceived = "";
 char otp[10];
@@ -144,6 +148,10 @@ void convertValue(String amount, String time) {
     Serial.println(';');*/
 }
 
+void setCurrentDate(String input){
+
+}
+
 boolean readCommand() {
     boolean serialRead = false;
     if(Serial.available() > 0) {
@@ -196,6 +204,8 @@ boolean readCommand() {
             
             verifyOtpCode(inputValue);
 
+        } else if (inputCommand.equals(SERIAL_COMMAND_GET_DATE)) {
+        	setCurrentDate(inputValue);
         }
         inputCommand = "";
         inputValue = "";
@@ -270,6 +280,20 @@ boolean MyCard::backendConnection() {
 		Serial.println("log:wifi error;");
 		return false;
 	}*/
+}
+
+void MyCard::getSecureKey() {
+	Serial.println("log: get secure key;");
+
+	if(!keyIsUpdated) {
+		while(!connectedToBackend) {
+			backendConnection();
+		}
+		Serial1.print("GET /gettodaykey HTTP/1.1\r\n");
+		Serial1.print("Host:winged-standard-741.appspot.com\r\n\r\n");
+		keyRequest = true;
+		checkSerial();
+	}
 }
 
 void MyCard::setId(char id[]) {
@@ -672,7 +696,6 @@ void MyCard::checkSerial() {
 	}*/
 	delay(1000);
 	int h;
-	String s= "";
 	do {
 		if (_wifishield->available() > 0) {
 			available = true;
@@ -703,14 +726,32 @@ void MyCard::checkSerial() {
 
 	//s = m;
 
-	//Serial.print(m);
+	Serial.print(m);
 
 	Serial.println(";");
 
 	delay(200);
 
-	if(strstr(m, "202") > 0) {
-		Serial.println("log: 202 accepted;");
+	if(strstr(m, "200 OK") > 0) {
+		Serial.println("log: 200 OK;");
+		if(keyRequest) {
+			char * p;
+			char * q;
+			p = strstr(m, "date");
+			q = strstr(m, "key");
+
+			memcpy(secret, q + 4, 20);
+			Serial.print("log: key ");
+			Serial.print(secret);
+			Serial.println(";");
+			memcpy(currentDate, p+5, 8);
+			Serial.print("log: date ");
+			Serial.print(currentDate);
+			Serial.println(";");
+
+		}
+	} else if(strstr(m, "202 Accepted") > 0) {
+		Serial.println("log: 202 Accepted;");
 	}
 
 }

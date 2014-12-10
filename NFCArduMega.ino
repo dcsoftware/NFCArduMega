@@ -58,22 +58,18 @@ void setup() {
     // uid must be 3 bytes!
     nfc.setUid(uid);
     nfc.initWifi(wizFi250);
-    //nfc.backendConnection();
+    nfc.getSecureKey();
     nfc.init();
 }
 
-//
-// Brief	Loop
-// Details	Blink the LED
-//
 // Add loop code
 
 void loop() {
 
-	Serial.println("log:main loop;");
+	/*Serial.println("log:main loop;");
     nfc.emulate(5000);
 
     wizFi250.closeAllSockets();
     //nfc.checkSerial();
-    Serial.println("log:fine emulazione;");
+    Serial.println("log:fine emulazione;");*/
 }

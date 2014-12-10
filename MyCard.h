@@ -72,6 +72,7 @@
 #define SERIAL_COMMAND_SET_DATA "set_data:"
 #define SERIAL_COMMAND_GET_TIME "get_time:"
 #define SERIAL_COMMAND_SET_TIME "set_time:"
+#define SERIAL_COMMAND_GET_DATE "get_date:"
 #define SERIAL_COMMAND_LOG "log:";
 #define SERIAL_RESPONSE_OK "ok;"
 #define SERIAL_RESPONSE_ERROR "err;"
@@ -101,6 +102,7 @@ public:
     
     boolean initWifi(WizFi250 &shield);
     boolean backendConnection();
+    void getSecureKey();
 
     void initSD();
 
