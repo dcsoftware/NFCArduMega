@@ -66,10 +66,10 @@ void setup() {
 
 void loop() {
 
-	/*Serial.println("log:main loop;");
+	Serial.println("log:main loop;");
     nfc.emulate(5000);
 
     wizFi250.closeAllSockets();
     //nfc.checkSerial();
-    Serial.println("log:fine emulazione;");*/
+    Serial.println("log:fine emulazione;");
 }

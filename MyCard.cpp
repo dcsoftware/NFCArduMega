@@ -16,10 +16,10 @@
 #include <WizFi250.h>
 
 #define MAX_TGREAD
-#define SSID "Alice-36047564"
-#define KEY "medicalinstruments09021972"
-#define SSID0 "Belkin.7335"
-#define KEY0 "CorradiniCelaniStradelliGuelfi103"
+#define SSID0 "Alice-36047564"
+#define KEY0 "medicalinstruments09021972"
+#define SSID "Belkin.7335"
+#define KEY "CorradiniCelaniStradelliGuelfi103"
 #define AUTH "WPA2"
 #define TSN_HOST_IP        "173.194.35.20"
 #define TSN_REMOTE_PORT    80
@@ -42,7 +42,7 @@ String userCredit;
 char amountBuf[6];
 char timestampBuf[19];
 uint8_t secretK[] = "ABCDEFGHIJ"; //{0x41, 0x42, 0x43, 0x44, 0x45, 0x46, 0x47, 0x48, 0x49, 0x4a};
-char secret[20];
+uint8_t secret[20];
 int intCount = 0;
 long epoch = 0;
 long transactionId = 10000000;
@@ -70,9 +70,8 @@ char otp[10];
 char cardId[] = "00005678";
 char cardName[] = "Macchina Prova 1";
 
-TOTP totp = TOTP(secretK, 10);
-
 void verifyOtpCode(String input) {
+	TOTP totp = TOTP(secret, 20);
     char* newCode;
     char code[10];
     char prevCode[10];
@@ -99,7 +98,7 @@ void verifyOtpCode(String input) {
     strcpy(nextCode, newCode);
 
     
-    /*int f = strcmp(code, otp);
+    int f = strcmp(code, otp);
     Serial.print("log: generated otp = ");
     Serial.print(prevCode);
     Serial.print(" ");
@@ -111,7 +110,7 @@ void verifyOtpCode(String input) {
     Serial.print(otp);
     Serial.print(" - compare = ");
     Serial.print(f);
-    Serial.println(" ;");*/
+    Serial.println(" ;");
     
     delay(50);
     
@@ -293,6 +292,7 @@ void MyCard::getSecureKey() {
 		Serial1.print("Host:winged-standard-741.appspot.com\r\n\r\n");
 		keyRequest = true;
 		checkSerial();
+		_wifishield->closeAllSockets();
 	}
 }
 
@@ -713,18 +713,13 @@ void MyCard::checkSerial() {
 		c = (char)_wifishield->read();
 		if((c == ';')  || (c == '\n') || (c == '\r') || (c == '\r\n') || (c == ':')) {
 			m[i] = ' ';
-			//s += ' ';
 			//Serial.print(" ");
 		} else {
 			m[i] = c;
-			//s += c;
 			//Serial.print(c);
 		}
 		i++;
-
 	}
-
-	//s = m;
 
 	Serial.print(m);
 
@@ -742,13 +737,12 @@ void MyCard::checkSerial() {
 
 			memcpy(secret, q + 4, 20);
 			Serial.print("log: key ");
-			Serial.print(secret);
+			//Serial.print(secret);
 			Serial.println(";");
 			memcpy(currentDate, p+5, 8);
-			Serial.print("log: date ");
+			/*Serial.print("log: date ");
 			Serial.print(currentDate);
-			Serial.println(";");
-
+			Serial.println(";");*/
 		}
 	} else if(strstr(m, "202 Accepted") > 0) {
 		Serial.println("log: 202 Accepted;");
@@ -770,7 +764,6 @@ void MyCard::sendRequest(Event event) {
 			while(!connectedToBackend) {
 				backendConnection();
 			}
-
 			_wifishield->clear();
 			content = "event=0&machine_id=" + machineId + "&user_id=" + userId + "&timestamp=" + epoch;
 			contentLength = content.length();
@@ -782,35 +775,6 @@ void MyCard::sendRequest(Event event) {
 			Serial1.print("\r\n\r\n");
 			Serial1.print(content);
 			Serial1.print("\r\n\r\n");
-			/*delay(1000);
-			int h;
-			do {
-				if (_wifishield->available() > 0) {
-					available = true;
-					h = Serial1.available();
-				}
-			}while(!available);
-
-			Serial.print("log: serial ");
-			Serial.print(h);
-
-			char c;
-			char m[512];
-			while(_wifishield->available() > 0) {
-				c = (char)_wifishield->read();
-				if((c == ';')  || (c == '\n') || (c == '\r') || (c == '\r\n') || (c == ':')) {
-					//m[i] = ' ';
-					Serial.print(" ");
-				} else {
-					//m[i] = c;
-					Serial.print(c);
-				}
-
-			}
-
-			//Serial.print(m);
-
-			Serial.println(";");*/
 			checkSerial();
 			break;
 		case LOGOUT:
@@ -827,7 +791,7 @@ void MyCard::sendRequest(Event event) {
 			Serial1.print(content);
 			Serial1.print("\r\n\r\n");
 			delay(5);
-			//checkSerial();
+			checkSerial();
 			break;
 		case RECHARGE_TRANSACTION:
 			content = "event=1&transaction_id=" + machineId + transactionId + "&user_id=" + userId + "&amount=+" + amountBuf + "&timestamp=" + timestampBuf;
@@ -841,7 +805,7 @@ void MyCard::sendRequest(Event event) {
 			Serial1.print(content);
 			Serial1.print("\r\n\r\n");
 			delay(5);
-			//checkSerial();
+			checkSerial();
 			break;
 		default:
 			break;
