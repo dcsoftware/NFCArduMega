@@ -101,6 +101,7 @@ public:
     bool init();
     
     boolean initWifi(WizFi250 &shield);
+    boolean initSDCard();
     boolean backendConnection();
     void getSecureKey();
 

@@ -14,13 +14,14 @@
 #include <TOTP.h>
 #include <stdlib.h>
 #include <WizFi250.h>
+#include <SD.h>
 
 #define MAX_TGREAD
-#define SSID0 "Alice-36047564"
-#define KEY0 "medicalinstruments09021972"
+#define SSID0 "Medical"
+#define KEY0 "Medical09021972"
 #define SSID "Belkin.7335"
 #define KEY "CorradiniCelaniStradelliGuelfi103"
-#define AUTH "WPA2"
+#define AUTH "WPAAES"
 #define TSN_HOST_IP        "173.194.35.20"
 #define TSN_REMOTE_PORT    80
 #define BACKEND "www.google.com"
@@ -258,6 +259,24 @@ boolean MyCard::initWifi(WizFi250 &shield) {
 	}
 }
 
+boolean MyCard::initSDCard() {
+
+	if(SD.begin()){
+		Serial.println("log: sd ok;");
+	} else {
+		Serial.println("log: sd not found;");
+	}
+
+	File logfile = SD.open("LOG.TXT", FILE_WRITE);
+
+	if(logfile){
+		Serial.println("log: File opened;");
+	} else {
+		Serial.println("log: error opening file;");
+	}
+
+}
+
 boolean MyCard::backendConnection() {
 	Serial.print("log:connecting to app engine ");
 	Serial.print((char*)_wifishield->m_peerIPAddr);
@@ -354,7 +373,7 @@ bool MyCard::emulate(const uint16_t tgInitAsTargetTimeout){
         return false;
     }
     Serial.println("log:target inizializzato;");
-    
+
     uint8_t base_capability_container[] = {
         0, 0x0F,    //CC length
         0x20,       //Mapping Version ---> version 2.0
@@ -695,16 +714,16 @@ void MyCard::checkSerial() {
 
 	}*/
 	delay(1000);
-	int h;
+	/*int h;
 	do {
 		if (_wifishield->available() > 0) {
 			available = true;
 			h = _wifishield->available();
 		}
-	}while(!available);
+	}while(!available);*/
 
-	Serial.print("log: serial ");
-	Serial.print(h);
+	//Serial.print("log: serial ");
+	//Serial.print(h);
 
 	char c;
 	char m[256];
@@ -721,9 +740,9 @@ void MyCard::checkSerial() {
 		i++;
 	}
 
-	Serial.print(m);
+	//Serial.print(m);
 
-	Serial.println(";");
+	//Serial.println(";");
 
 	delay(200);
 
@@ -737,7 +756,7 @@ void MyCard::checkSerial() {
 
 			memcpy(secret, q + 4, 20);
 			Serial.print("log: key ");
-			//Serial.print(secret);
+			Serial.print(q);
 			Serial.println(";");
 			memcpy(currentDate, p+5, 8);
 			/*Serial.print("log: date ");
@@ -751,6 +770,8 @@ void MyCard::checkSerial() {
 }
 
 void MyCard::sendRequest(Event event) {
+
+    File logfile = SD.open("LOG.TXT", FILE_WRITE);
 
 	String content;
 	int contentLength;
@@ -775,6 +796,7 @@ void MyCard::sendRequest(Event event) {
 			Serial1.print("\r\n\r\n");
 			Serial1.print(content);
 			Serial1.print("\r\n\r\n");
+			logfile.println("logged in," + timestamp + "," + userId + ",");
 			checkSerial();
 			break;
 		case LOGOUT:
@@ -790,6 +812,7 @@ void MyCard::sendRequest(Event event) {
 			Serial1.print("\r\n\r\n");
 			Serial1.print(content);
 			Serial1.print("\r\n\r\n");
+			logfile.println("purchase," + timestamp + "," + userId + "," + amountBuf + "," + transactionId + ",");
 			delay(5);
 			checkSerial();
 			break;
@@ -804,6 +827,7 @@ void MyCard::sendRequest(Event event) {
 			Serial1.print("\r\n\r\n");
 			Serial1.print(content);
 			Serial1.print("\r\n\r\n");
+			logfile.println("recharge," + timestamp + "," + userId + "," + amountBuf + "," + transactionId + ",");
 			delay(5);
 			checkSerial();
 			break;
@@ -811,5 +835,7 @@ void MyCard::sendRequest(Event event) {
 			break;
 	}
     eventType = NOTHING;
+
+    logfile.close();
 }
 

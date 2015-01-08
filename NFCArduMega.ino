@@ -58,6 +58,7 @@ void setup() {
     // uid must be 3 bytes!
     nfc.setUid(uid);
     nfc.initWifi(wizFi250);
+    nfc.initSDCard();
     nfc.getSecureKey();
     nfc.init();
 }
