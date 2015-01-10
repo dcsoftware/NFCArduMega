@@ -16,8 +16,10 @@
 #include <WizFi250.h>
 
 #define MAX_TGREAD
-#define SSID0 "Alice-36047564"
-#define KEY0 "medicalinstruments09021972"
+#define SSID "Medical"
+#define KEY "Medical09021972"
+#define SSID0 "AndroidAP"
+#define KEY0 "stefano13"
 #define SSID "Belkin.7335"
 #define KEY "CorradiniCelaniStradelliGuelfi103"
 #define AUTH "WPA2"
@@ -55,6 +57,7 @@ String inputCommand = "";         // a string to hold incoming data
 String inputValue = "";
 String inputValue2 = "";
 String otpIn;
+String timestamp = "";
 boolean commandComplete = false;  // whether the string is complete
 boolean valueIn = false;
 boolean valueIn2 = false;
@@ -70,8 +73,10 @@ char otp[10];
 char cardId[] = "00005678";
 char cardName[] = "Macchina Prova 1";
 
+TOTP totp = TOTP(secretK, 20);
+
+
 void verifyOtpCode(String input) {
-	TOTP totp = TOTP(secret, 20);
     char* newCode;
     char code[10];
     char prevCode[10];
@@ -98,7 +103,7 @@ void verifyOtpCode(String input) {
     strcpy(nextCode, newCode);
 
     
-    int f = strcmp(code, otp);
+    /*int f = strcmp(code, otp);
     Serial.print("log: generated otp = ");
     Serial.print(prevCode);
     Serial.print(" ");
@@ -110,7 +115,7 @@ void verifyOtpCode(String input) {
     Serial.print(otp);
     Serial.print(" - compare = ");
     Serial.print(f);
-    Serial.println(" ;");
+    Serial.println(" ;");*/
     
     delay(50);
     
@@ -128,14 +133,16 @@ void verifyOtpCode(String input) {
     } else {
         cardState = ERROR_AUTH;
         //Serial.println("log: AUTHENTICATION ERROR;");
-
     }
+
+    timestamp = input;
 }
 
 void convertValue(String amount, String time) {
 	//String amount = inputS.substring(0, 5); //inputS.length() - 1);
 	//String time = inputS.substring(6);
     //int z = inputS.indexOf('-');
+    timestamp = time;
     amount.toCharArray(amountBuf, sizeof(amountBuf));
     amountBuf[sizeof(amountBuf) - 1] = 0;
     time.concat(String(transactionId));
@@ -145,6 +152,7 @@ void convertValue(String amount, String time) {
     /*Serial.print("log:inputS=");
     Serial.print(timestampBuf);
     Serial.println(';');*/
+
 }
 
 void setCurrentDate(String input){
@@ -199,7 +207,7 @@ boolean readCommand() {
         	transactionId++;
         	convertValue(inputValue.substring(0, 5), inputValue.substring(6, 16));
             cardState = RECHARGE;
-        } else if (inputCommand.equals(SERIAL_COMMAND_GET_TIME) && (serialState == S_CONNECTED)) {
+        } else if (inputCommand.equals(SERIAL_COMMAND_GET_TIME)) {
             
             verifyOtpCode(inputValue);
 
@@ -292,7 +300,11 @@ void MyCard::getSecureKey() {
 		Serial1.print("Host:winged-standard-741.appspot.com\r\n\r\n");
 		keyRequest = true;
 		checkSerial();
+
+		Serial1.print("+++");
+		delay(1200);
 		_wifishield->closeAllSockets();
+		totp = TOTP(secret, 20);
 	}
 }
 
@@ -506,18 +518,23 @@ bool MyCard::emulate(const uint16_t tgInitAsTargetTimeout){
                     /*Serial.print("log:");
                     Serial.print(userCredit);
                     Serial.println(";");*/
-                    Serial.println("set_data:" + userCredit + ';');
+                    Serial.print("set_data:");
+                    Serial.print(userCredit);
+                    Serial.println(";");
                     delay(100);
+
                     while (!readCommand()) {
                         delay(10);
                     }
                     cardState = WAITING;
+                    setResponse(COMMAND_COMPLETE, rwbuf, &sendlen);
                     if(!loggedin) {
                         //eventType = LOGIN;
+                    	Serial.println("log: login;");
+                        sendRequest(LOGIN);
                         loggedin = true;
                     }
-                    setResponse(COMMAND_COMPLETE, rwbuf, &sendlen);
-                    sendRequest(LOGIN);
+
                 }
                 break;
             case READING_STATUS:
@@ -703,8 +720,8 @@ void MyCard::checkSerial() {
 		}
 	}while(!available);
 
-	Serial.print("log: serial ");
-	Serial.print(h);
+	//Serial.print("log: serial ");
+	//Serial.print(h);
 
 	char c;
 	char m[256];
@@ -721,9 +738,9 @@ void MyCard::checkSerial() {
 		i++;
 	}
 
-	Serial.print(m);
+	//Serial.print(m);
 
-	Serial.println(";");
+	//Serial.println(";");
 
 	delay(200);
 
@@ -746,6 +763,8 @@ void MyCard::checkSerial() {
 		}
 	} else if(strstr(m, "202 Accepted") > 0) {
 		Serial.println("log: 202 Accepted;");
+	} else if(strstr(m, "500") > 0) {
+		Serial.println("log: Internal Server Error;");
 	}
 
 }
@@ -755,7 +774,6 @@ void MyCard::sendRequest(Event event) {
 	String content;
 	int contentLength;
 	String machineId = cardId;
-	String timestamp = timestampBuf;
 	boolean available = false;
 	switch(event) {
 		case NOTHING:
@@ -765,7 +783,12 @@ void MyCard::sendRequest(Event event) {
 				backendConnection();
 			}
 			_wifishield->clear();
-			content = "event=0&machine_id=" + machineId + "&user_id=" + userId + "&timestamp=" + epoch;
+			content = "event=0&machine_id=";
+			content += machineId;
+			content += "&user_id=";
+			content += userId;
+			content += "&timestamp=";
+			content += timestamp;
 			contentLength = content.length();
 			Serial1.print("POST /eventlogger HTTP/1.1\r\n");
 			Serial1.print("Host:winged-standard-741.appspot.com\r\n");
@@ -780,7 +803,15 @@ void MyCard::sendRequest(Event event) {
 		case LOGOUT:
 			break;
 		case PURCHASE_TRANSACTION:
-			content = "event=1&transaction_id=" + machineId + transactionId + "&user_id=" + userId + "&amount=-" + amountBuf + "&timestamp=" + timestampBuf;
+			content = "event=1&transaction_id=";
+			content += machineId;
+			content += transactionId;
+			content += "&user_id=";
+			content += userId;
+			content += "&amount=-";
+			content += amountBuf;
+			content += "&timestamp=";
+			content += timestamp;
 			contentLength = content.length();
 			Serial1.print("POST /eventlogger HTTP/1.1\r\n");
 			Serial1.print("Host:winged-standard-741.appspot.com\r\n");
@@ -790,11 +821,18 @@ void MyCard::sendRequest(Event event) {
 			Serial1.print("\r\n\r\n");
 			Serial1.print(content);
 			Serial1.print("\r\n\r\n");
-			delay(5);
 			checkSerial();
 			break;
 		case RECHARGE_TRANSACTION:
-			content = "event=1&transaction_id=" + machineId + transactionId + "&user_id=" + userId + "&amount=+" + amountBuf + "&timestamp=" + timestampBuf;
+			content = "event=1&transaction_id=";
+			content += machineId;
+			content += transactionId;
+			content += "&user_id=";
+			content += userId;
+			content += "&amount=+";
+			content += amountBuf;
+			content += "&timestamp=";
+			content += timestamp;
 			contentLength = content.length();
 			Serial1.print("POST /eventlogger HTTP/1.1\r\n");
 			Serial1.print("Host:winged-standard-741.appspot.com\r\n");
@@ -804,7 +842,6 @@ void MyCard::sendRequest(Event event) {
 			Serial1.print("\r\n\r\n");
 			Serial1.print(content);
 			Serial1.print("\r\n\r\n");
-			delay(5);
 			checkSerial();
 			break;
 		default:
